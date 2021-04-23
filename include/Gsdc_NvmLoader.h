@@ -34,9 +34,6 @@ public:
     ~Gsdc_NvmLoader(){ delete _nonValatileMemory; }
     void begin();
     void processSerialInput();
-
-    void addressNullifiedEventHandler(int address);
-    void eepromEraseStartedEventHandler(int memory_size, bool quick_erase);
 };
 
 #endif

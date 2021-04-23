@@ -1,4 +1,11 @@
 #include "Gsdc_NvmLoader.h"
+#include <WiFi.h>
+
+namespace Gsdc_NvmLoader_ns {
+  bool quick_erase = false;
+  void addressNullifiedEventHandler(int address);
+  void eepromEraseStartedEventHandler(int memory_size, bool quick_erase);
+}
 
 void Gsdc_NvmLoader::displayMemoryContents() 
 { 
@@ -22,7 +29,7 @@ String Gsdc_NvmLoader::captureSerialInput()
 bool Gsdc_NvmLoader::getMessage()
 {
   Serial.println("Enter the value you want to store or q|quit to cancel");
-  Serial.print("Your Message: ");
+  Serial.print("Your Data: ");
 
   String message = "";
   while(message != "q" && message != "quit" && message.length() == 0)
@@ -37,7 +44,7 @@ bool Gsdc_NvmLoader::getMessage()
   String response = "";
   while(response != "y" && response != "yes" && response != "n" &&  response != "no" && response != "q" && response != "quit") 
   {
-    Serial.println("Is the message correct?");
+    Serial.println("Is the data correct?");
     response = captureSerialInput();
   }
   if(response == "q" || response == "quit") { Serial.println("EXIT"); return false; }
@@ -53,25 +60,6 @@ void Gsdc_NvmLoader::writeMessage(DataMarkers marker)
 
   Serial.println("Writing " + _receivedMessage + " to memory");
   _nonValatileMemory->write(_receivedMessage, marker);   
-}
-
-void Gsdc_NvmLoader::addressNullifiedEventHandler(int address) 
-{ 
-  if(_quickErase)
-    Serial.print(".");
-}
-
-void Gsdc_NvmLoader::eepromEraseStartedEventHandler(int memory_size, bool quick_erase) 
-{ 
-  _quickErase = quick_erase;
-  _erasableMemory = memory_size;
-  if(quick_erase) 
-  {
-    Serial.println("Performing a quick erase of EEPROM data");
-    return;
-  }
-  Serial.println("Performing a deep erase of EEPROM data.");
-  Serial.println("Please be patient, this can take upwards of five minutes. You will be notified when the operation has completed");
 }
 
 void Gsdc_NvmLoader::writeData(char command)
@@ -119,7 +107,10 @@ void Gsdc_NvmLoader::showInstructions()
   Serial.println(" c\t- Clear local memory");
   Serial.println(" r\t- Read EEPROM into memory");
   Serial.println(" f\t- Flush");
+  Serial.println(" m\t- Show the memory contents");
   Serial.println(" i\t- Show instructions");
+  Serial.println("");
+  Serial.println(WiFi.macAddress());
   Serial.println("");
 }
 
@@ -150,6 +141,24 @@ void Gsdc_NvmLoader::processSerialInput()
 void Gsdc_NvmLoader::begin()
 {
     Serial.println();
+    _nonValatileMemory->addAddressNullifiedEventHandler(&Gsdc_NvmLoader_ns::addressNullifiedEventHandler);
+    _nonValatileMemory->addEepromEraseStartedEventHandler(&Gsdc_NvmLoader_ns::eepromEraseStartedEventHandler);
     showInstructions();
 }
 
+void Gsdc_NvmLoader_ns::addressNullifiedEventHandler(int address) 
+{ 
+  if(quick_erase)
+    Serial.print(".");
+}
+
+void Gsdc_NvmLoader_ns::eepromEraseStartedEventHandler(int memory_size, bool quick_erase)
+{
+  if(quick_erase) 
+  {
+    Serial.println("Performing a quick erase of EEPROM data");
+    return;
+  }
+  Serial.println("Performing a deep erase of EEPROM data.");
+  Serial.println("Please be patient, this can take upwards of five minutes. You will be notified when the operation has completed");
+}
